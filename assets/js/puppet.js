@@ -3,6 +3,20 @@ function Socket(sockUrl, channel, nick) {
     return {
         sock: sock,
         callbacks: [],
+        commands: {
+            ":help": {
+                description: "Show this help",
+                call: function () {
+                    var msg = "# Commands\n\n";
+
+                    for (var cmd in this.commands) {
+                        msg += ` - :${cmd}\t${this.commands[cmd]}.\n`;
+                    }
+
+                    return msg;
+                }
+            },
+        },
     };
 }
 
@@ -33,8 +47,8 @@ function Puppet(name) {
             }
         },
 
-        chat: function (sockName, data) {
-            this.send(sockName, "chat", data);
+        chat: function (sockName, message) {
+            this.send(sockName, "chat", {text: message});
         },
 
         addEventListener: function (sockName, call) {
@@ -47,7 +61,19 @@ function Puppet(name) {
 
         addSocketConn: function (sockName, sockUrl) {
             this.socks[sockName] = Socket(sockUrl, sockName, this.name);
-            this.send(sockName, "join", {nick: this.name})
+            this.send(sockName, "join", {nick: this.name});
+            this.addEventListener(sockName, e => {
+                var res = JSON.parse(e.data);
+                if (res.cmd == "chat" && res.text[0] == ":") {
+                    var servMsg = res.text.split(" ", 1);
+                    var servCmd = servMsg[0].trim();
+
+                    var msg = this.socks[sockName].commands[servCmd].call(servMsg[1]);
+
+                    if (msg)
+                        this.chat(sockName, msg);
+                }
+            });
         }
     };
 }
