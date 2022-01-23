@@ -7,7 +7,7 @@ function Socket(sockUrl, channel, nick) {
         sock: sock,
         callbacks: [],
         commands: {
-            ":help": {
+            help: {
                 description: "Show this help",
                 call: function () {
                     var msg = "# Commands\n\n";
@@ -53,7 +53,7 @@ function Puppet(name) {
             this.send(sockName, "chat", {text: message});
         },
 
-        addEventListener: function (sockName, call) {
+        addMsgListener: function (sockName, call) {
             this.socks[sockName].callbacks.push(call);
             this.socks[sockName].sock.addEventListener('message', function (e) {
                 for (var call of this.socks[sockName].callbacks)
@@ -72,7 +72,7 @@ function Puppet(name) {
                 var res = JSON.parse(e.data);
                 if (res.cmd == "chat" && res.text[0] == ":") {
                     var servMsg = res.text.split(" ", 1);
-                    var servCmd = servMsg[0].trim();
+                    var servCmd = servMsg[0].substring(1).trim();
                     var command = sock.commands[servCmd]
 
                     if (!command) {
