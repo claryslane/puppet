@@ -1,3 +1,6 @@
+const errCmdNotFound = "ERROR: Command not found!";
+const errSockNotFound = "ERROR: Sock need to be registered!";
+
 function Socket(sockUrl, channel, nick) {
     var sock = new WebSocket(sockUrl);
     return {
@@ -34,10 +37,9 @@ function Puppet(name) {
         },
 
         send: function (sockName, cmd, data) {
-            if (sockName && this.socks[sockName])
-                sock = this.socks[sockName].sock;
-
-            else throw "Sock need to be registered!";
+            sock = this.socks[sockName].sock;
+            if (!sock)
+                throw errSockNotFound;
 
             if (data) {
                 var cmd = this.command(sockName, cmd, data);
@@ -63,12 +65,22 @@ function Puppet(name) {
             this.socks[sockName] = Socket(sockUrl, sockName, this.name);
             this.send(sockName, "join", {nick: this.name});
             this.addEventListener(sockName, e => {
+                var sock = this.socks[sockName];
+                if (!sock)
+                    throw errSockNotFound;
+
                 var res = JSON.parse(e.data);
                 if (res.cmd == "chat" && res.text[0] == ":") {
                     var servMsg = res.text.split(" ", 1);
                     var servCmd = servMsg[0].trim();
+                    var command = sock.commands[servCmd]
 
-                    var msg = this.socks[sockName].commands[servCmd].call(servMsg[1]);
+                    if (!command) {
+                        this.chat(sockName, errCmdNotFound);
+                        throw errCmdNotFound;
+                    }
+
+                    var msg = command.call(servMsg[1]);
 
                     if (msg)
                         this.chat(sockName, msg);
