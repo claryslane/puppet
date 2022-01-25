@@ -1,8 +1,18 @@
 const errCmdNotFound = "ERROR: Command not found!";
 const errSockNotFound = "ERROR: Sock need to be registered!";
 
+const sockUrl = "wss://hack.chat/chat-ws";
+
 function Socket(sockUrl, channel, nick) {
     var sock = new WebSocket(sockUrl);
+    const cmd = {
+        channel: channel,
+        cmd: "join",
+        nick: nick,
+    }
+
+    sock.addEventListener("open", () => sock.send(JSON.stringify(cmd)));
+
     return {
         sock: sock,
         callbacks: [],
@@ -54,21 +64,20 @@ function Puppet(name) {
         },
 
         addMsgListener: function (sockName, call) {
-            this.socks[sockName].callbacks.push(call);
-            this.socks[sockName].sock.addEventListener('message', function (e) {
-                for (var call of this.socks[sockName].callbacks)
-                    call(e);
-            });
+            var sock = this.socks[sockName];
+            if (!sock) throw errSockNotFound;
+
+            sock.callbacks.push(call);
         },
 
-        addSocketConn: function (sockName, sockUrl) {
+        addSocketConn: function (sockName) {
             this.socks[sockName] = Socket(sockUrl, sockName, this.name);
-            this.send(sockName, "join", {nick: this.name});
-            this.addEventListener(sockName, e => {
-                var sock = this.socks[sockName];
-                if (!sock)
+
+            this.addMsgListener(sockName, e => {
+                if (!e.chanName || !e.puppet)
                     throw errSockNotFound;
 
+                var sock = e.puppet.socks[e.chanName];
                 var res = JSON.parse(e.data);
                 if (res.cmd == "chat" && res.text[0] == ":") {
                     var servMsg = res.text.split(" ", 1);
@@ -80,12 +89,24 @@ function Puppet(name) {
                         throw errCmdNotFound;
                     }
 
-                    var msg = command.call(servMsg[1]);
+                    var msg = command.call(servMsg[1].trim(), e);
 
                     if (msg)
                         this.chat(sockName, msg);
                 }
             });
-        }
+        },
+
+        listen: function () {
+            for (var chanName in this.socks) {
+                this.socks[chanName].sock.addEventListener("message", e => {
+                    e.chanName = chanName;
+                    e.puppet = this;
+
+                    for (var call of this.socks[chanName].callbacks)
+                        call(e);
+                });
+            }
+        },
     };
 }
