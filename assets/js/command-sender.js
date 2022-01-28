@@ -4,26 +4,29 @@ function addCommandSender(channels, chanName, sender) {
             throw errSockNotFound;
 
         var cmd = JSON.parse(e.data);
-        if (cmd.text && cmd.channel != defaultChan && cmd.nick == sender) {
+
+        console.log(cmd)
+        if (cmd.text && cmd.channel != defaultChan) {
             var message = cmd.nick + "@" + e.chanName + ": " + cmd.text;
             channels.chat(defaultChan, message);
+        }
 
-            var sock = e.puppet.socks[e.chanName];
-            if (cmd.cmd == "chat" && cmd.text[0] == ":") {
-                var servMsg = cmd.text.split(" ", 1);
-                var servCmd = servMsg[0].substring(1).trim();
-                var command = sock.commands[servCmd]
+        var sock = e.puppet.socks[e.chanName];
+        if (cmd.cmd == "chat" && cmd.text[0] == ":" && cmd.nick == sender) {
+            var servMsg = cmd.text.split(" ", 1);
+            var servCmd = servMsg[0].substring(1).trim();
+            var command = sock.commands[servCmd]
 
-                if (!command) {
-                    this.chat(sockName, errCmdNotFound);
-                    throw errCmdNotFound;
-                }
-
-                var msg = command.call(servMsg[1].trim(), e);
-
-                if (msg)
-                    this.chat(sockName, msg);
+            if (!command) {
+                channels.chat(e.chanName, errCmdNotFound);
+                throw errCmdNotFound;
             }
+
+            var params = servMsg[1] ?servMsg[1] :"";
+            var msg = command.call(params.trim(), e);
+
+            if (msg)
+                channels.chat(e.chanName, msg);
         }
     });
 

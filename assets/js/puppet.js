@@ -3,6 +3,21 @@ const errSockNotFound = "ERROR: Sock need to be registered!";
 
 const sockUrl = "wss://hack.chat/chat-ws";
 
+function makeHelp(commands) {
+    return {
+        description: "Show this help",
+        call: function () {
+            var msg = "# Commands\n\n";
+
+            for (var cmd in commands) {
+                msg += ` - :${cmd}\t${commands[cmd].description}.\n`;
+            }
+
+            return msg;
+        }
+    }
+}
+
 function Socket(sockUrl, channel, nick) {
     var sock = new WebSocket(sockUrl);
     const cmd = {
@@ -17,18 +32,7 @@ function Socket(sockUrl, channel, nick) {
         sock: sock,
         callbacks: [],
         commands: {
-            help: {
-                description: "Show this help",
-                call: function () {
-                    var msg = "# Commands\n\n";
-
-                    for (var cmd in this.commands) {
-                        msg += ` - :${cmd}\t${this.commands[cmd]}.\n`;
-                    }
-
-                    return msg;
-                }
-            },
+            help: makeHelp({ help: { description: "Show this help message." } }),
         },
     };
 }
@@ -64,10 +68,11 @@ function Puppet(name) {
         },
 
         addCmd: function (sockName, cmdName, call, desc) {
-            this.sock[sockName].commands[cmdName] = {
+            this.socks[sockName].commands[cmdName] = {
                 call: call,
                 description: desc,
-            }
+            };
+            this.socks[sockName].commands.help = makeHelp(this.socks[sockName].commands);
         },
 
         addMsgListener: function (sockName, call) {
@@ -80,7 +85,9 @@ function Puppet(name) {
         addSocketConn: function (sockName, customMsgListener) {
             this.socks[sockName] = Socket(sockUrl, sockName, this.name);
 
-            if (!customMsgListener) {
+            if (customMsgListener)
+                this.addMsgListener(sockName, customMsgListener);
+            else {
                 this.addMsgListener(sockName, e => {
                     if (!e.chanName || !e.puppet)
                         throw errSockNotFound;
@@ -103,8 +110,6 @@ function Puppet(name) {
                             this.chat(sockName, msg);
                     }
                 });
-            } else {
-                this.addMsgListener(sockName, customListener);
             }
         },
 
