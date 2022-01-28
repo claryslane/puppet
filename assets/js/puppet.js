@@ -63,6 +63,13 @@ function Puppet(name) {
             this.send(sockName, "chat", {text: message});
         },
 
+        addCmd: function (sockName, cmdName, call, desc) {
+            this.sock[sockName].commands[cmdName] = {
+                call: call,
+                description: desc,
+            }
+        },
+
         addMsgListener: function (sockName, call) {
             var sock = this.socks[sockName];
             if (!sock) throw errSockNotFound;
