@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title></title>
+		<script src="assets/js/puppet.js"></script>
+		<script src="assets/js/default.js"></script>
+		<script src="assets/js/command-sender.js"></script>
+		<script src="assets/js/params.js"></script>
+	</head>
+	<body>
+		<div id="response" class="name">
+		</div>
+		<div id="hackerConsole">
+		</div>
+		<script>
+			var chanName = getParam("session");
+			var sender = getParam("sender");
+
+			channels.name = "otario";
+			addCommandSender(channels, chanName, sender);
+
+			channels.addCmd(chanName, "wrong", (args, event) => {
+				console.log("add cmd CARAII!! ", args, event);
+				document.querySelector("#response").innerHTML = `
+					<h1><spam style="color:red">Filhos da pulta!</spam></h1>
+				`;
+			}, "Say wrong to this user!");
+
+			channels.addMsgListener(chanName, e => {
+				var cmd = JSON.parse(e.data);
+				if (cmd.nick == "maria" && cmd.cmd == "chat")
+					document.querySelector("#hackerConsole").innerHTML += `
+						<h1>${cmd.nick}</h1>
+						<p>${cmd.text}</p>
+					`;
+			});
+			channels.listen();
+		</script>
+	</body>
+</html>
