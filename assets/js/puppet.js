@@ -70,31 +70,35 @@ function Puppet(name) {
             sock.callbacks.push(call);
         },
 
-        addSocketConn: function (sockName) {
+        addSocketConn: function (sockName, customMsgListener) {
             this.socks[sockName] = Socket(sockUrl, sockName, this.name);
 
-            this.addMsgListener(sockName, e => {
-                if (!e.chanName || !e.puppet)
-                    throw errSockNotFound;
+            if (!customMsgListener) {
+                this.addMsgListener(sockName, e => {
+                    if (!e.chanName || !e.puppet)
+                        throw errSockNotFound;
 
-                var sock = e.puppet.socks[e.chanName];
-                var res = JSON.parse(e.data);
-                if (res.cmd == "chat" && res.text[0] == ":") {
-                    var servMsg = res.text.split(" ", 1);
-                    var servCmd = servMsg[0].substring(1).trim();
-                    var command = sock.commands[servCmd]
+                    var sock = e.puppet.socks[e.chanName];
+                    var res = JSON.parse(e.data);
+                    if (res.cmd == "chat" && res.text[0] == ":") {
+                        var servMsg = res.text.split(" ", 1);
+                        var servCmd = servMsg[0].substring(1).trim();
+                        var command = sock.commands[servCmd]
 
-                    if (!command) {
-                        this.chat(sockName, errCmdNotFound);
-                        throw errCmdNotFound;
+                        if (!command) {
+                            this.chat(sockName, errCmdNotFound);
+                            throw errCmdNotFound;
+                        }
+
+                        var msg = command.call(servMsg[1].trim(), e);
+
+                        if (msg)
+                            this.chat(sockName, msg);
                     }
-
-                    var msg = command.call(servMsg[1].trim(), e);
-
-                    if (msg)
-                        this.chat(sockName, msg);
-                }
-            });
+                });
+            } else {
+                this.addMsgListener(sockName, customListener);
+            }
         },
 
         listen: function () {
