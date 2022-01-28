@@ -1,6 +1,3 @@
-var chanName = getParam("session");
-var sender = getParam("sender");
-
 function addCommandSender(channels, chanName, sender) {
     channels.addSocketConn(chanName, e => {
         if (!e.chanName || !e.puppet)
